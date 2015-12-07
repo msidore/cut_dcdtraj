@@ -14,6 +14,7 @@ psf = ""
 wFrames = ""
 numFrames = ""
 catdcd_loc = ""
+gromacs = False
 
 parser = ArgumentParser(description=""" Using catdcd, cuts a .dcd trajectory into slices with the specified number of frames\n
 MDAnalysis is only used to get the number of frames if it is not specified.  """)
@@ -28,6 +29,7 @@ parser.add_argument("-o", "--output", help="The generic name of the output.")
 
 # Optional arguments
 parser.add_argument("-d", "--directory", help="Output directory ? Default is the current directory.")
+parser.add_argument("-trr", "--gromacs", help="Is it a gromacs trr trajectory ? Uses trjconv to split everything !")
 
 args = parser.parse_args()
 
@@ -105,7 +107,8 @@ if os.path.isfile(psf):
         while len(psf) < 4 or (len(psf) >= 4 and psf[-4:] != ".psf"):
             psf = askopenfilename()
 
-
+if args.gromacs:
+    gromacs = True
 
 ######################## Functions ########################
 
@@ -134,6 +137,23 @@ def makeSlice(trajectory, outName, directory, numFrames, wFrames, position):
 
     return makeSlice(trajectory, outName, directory, numFrames, wFrames, position + wFrames)
 
+def makeTrrSlice(trajectory, outName, directory, numFrames, wFrames, position)
+    """Recursion to slice the trr"""
+
+    if numFrames-position>wFrames:
+        output = directory + outName + "_" + str(position) + "-" + str(position + wFrames -1) + ".trr"
+    else:
+        output = directory + outName + "_" + str(position) + "-" + str(numFrames) + ".trr"
+
+    bashCommand = "gmx trjconv -o " + output + " -f " + trajectory + " -b " + str(position) + " -e " + str(position + wFrames -1)
+    subsprocess.Popen(bashCommand, shell=True).wait()
+    print bashCommand
+
+    if wFrames+position>numFrames:
+        sys.exit()
+
+    return makeTrrSlice(trajectory, outName, directory, numFrames, wFrames, position + wFrames)
+
 ######################## Main ########################
 
 if __name__ == '__main__':
@@ -144,8 +164,10 @@ if __name__ == '__main__':
     else:
         numFrames = getNumframes(trajectory)
 
-    makeSlice(trajectory, outName, directory, numFrames, wFrames, 0)
-
+    if gromacs == False:
+        makeSlice(trajectory, outName, directory, numFrames, wFrames, 0)
+    else:
+        makeTrrSlice(trajectory, outName, directory, numFrames, wFrames, 0)
 
 
 
