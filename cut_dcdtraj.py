@@ -168,7 +168,7 @@ if __name__ == '__main__':
     if gromacs == False:
         makeSlice(trajectory, outName, directory, numFrames, wFrames, 0)
     else:
-        makeTrrSlice(trajectory, outName, directory, numFrames, wFrames, firstPos)
+        makeTrrSlice(trajectory, outName, directory, numFrames + firstPos, wFrames, firstPos)
 
 
 
