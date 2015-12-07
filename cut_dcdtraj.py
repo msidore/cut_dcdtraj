@@ -86,26 +86,26 @@ except ValueError:
 # Checks if the file is indeed there - and if it isn't, browse your directories
 if args.file:
     trajectory = args.file
-if os.path.isfile(trajectory):
-    if len(trajectory) < 4 or (len(trajectory)) >= 4 and trajectory[-4:] != ".dcd":
-        print "Wrong trajectory name ! Your trajectory must be a .dcd file. Which file do you want ?"
-        from Tkinter import Tk
-        from tkFileDialog import askopenfilename
-        trajectory = askopenfilename()
-        while len(trajectory) < 4 or (len(trajectory)) >= 4 and trajectory[-4:] != ".dcd":
-            trajectory = askopenfilename()
+#~ if os.path.isfile(trajectory):
+    #~ if len(trajectory) < 4 or (len(trajectory)) >= 4 and trajectory[-4:] != ".dcd":
+        #~ print "Wrong trajectory name ! Your trajectory must be a .dcd file. Which file do you want ?"
+        #~ from Tkinter import Tk
+        #~ from tkFileDialog import askopenfilename
+        #~ trajectory = askopenfilename()
+        #~ while len(trajectory) < 4 or (len(trajectory)) >= 4 and trajectory[-4:] != ".dcd":
+            #~ trajectory = askopenfilename()
 
 # Checks if the topology file is there
 if args.psf:
     trajectory = args.psf
-if os.path.isfile(psf):
-    if len(psf) < 4 or (len(psf) >= 4 and psf[-4:] != ".psf"):
-        print "Wrong topology name ! Your topology must be a .psf file. Which file do you want ?"
-        from Tkinter import Tk
-        from tkFileDialog import askopenfilename
-        psf = askopenfilename()
-        while len(psf) < 4 or (len(psf) >= 4 and psf[-4:] != ".psf"):
-            psf = askopenfilename()
+#~ if os.path.isfile(psf):
+    #~ if len(psf) < 4 or (len(psf) >= 4 and psf[-4:] != ".psf"):
+        #~ print "Wrong topology name ! Your topology must be a .psf file. Which file do you want ?"
+        #~ from Tkinter import Tk
+        #~ from tkFileDialog import askopenfilename
+        #~ psf = askopenfilename()
+        #~ while len(psf) < 4 or (len(psf) >= 4 and psf[-4:] != ".psf"):
+            #~ psf = askopenfilename()
 
 if args.gromacs:
     gromacs = True
@@ -113,12 +113,13 @@ if args.gromacs:
 ######################## Functions ########################
 
 def getNumframes(trajectory):
-    """Gets the number of frames"""
+    """Gets the number of frames and the first time"""
 
     import MDAnalysis
     mobile = MDAnalysis.Universe(psf, trajectory)
 
-    return mobile.trajectory.numframes
+    # The time is weird. My timestep in gromacs is 20fs, I have here to multiply by 20*10 to get the right time
+    return mobile.trajectory.numframes, int(mobile.trajectory.time)*200
 
 def makeSlice(trajectory, outName, directory, numFrames, wFrames, position):
     """Recursion to slice the trajectory into bits"""
@@ -137,16 +138,16 @@ def makeSlice(trajectory, outName, directory, numFrames, wFrames, position):
 
     return makeSlice(trajectory, outName, directory, numFrames, wFrames, position + wFrames)
 
-def makeTrrSlice(trajectory, outName, directory, numFrames, wFrames, position)
+def makeTrrSlice(trajectory, outName, directory, numFrames, wFrames, position):
     """Recursion to slice the trr"""
 
     if numFrames-position>wFrames:
-        output = directory + outName + "_" + str(position) + "-" + str(position + wFrames -1) + ".trr"
+        output = directory + outName + "_" + str(position - firstPos) + "-" + str(position - firstPos + wFrames -1) + ".trr"
     else:
-        output = directory + outName + "_" + str(position) + "-" + str(numFrames) + ".trr"
+        output = directory + outName + "_" + str(position - firstPos) + "-" + str(numFrames - firstPos) + ".trr"
 
     bashCommand = "gmx trjconv -o " + output + " -f " + trajectory + " -b " + str(position) + " -e " + str(position + wFrames -1)
-    subsprocess.Popen(bashCommand, shell=True).wait()
+    subprocess.Popen(bashCommand, shell=True).wait()
     print bashCommand
 
     if wFrames+position>numFrames:
@@ -162,12 +163,12 @@ if __name__ == '__main__':
     if args.numframes:
         numFrames = args.numframes
     else:
-        numFrames = getNumframes(trajectory)
+        numFrames, firstPos = getNumframes(trajectory)
 
     if gromacs == False:
         makeSlice(trajectory, outName, directory, numFrames, wFrames, 0)
     else:
-        makeTrrSlice(trajectory, outName, directory, numFrames, wFrames, 0)
+        makeTrrSlice(trajectory, outName, directory, numFrames, wFrames, firstPos)
 
 
 
