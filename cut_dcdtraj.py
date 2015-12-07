@@ -14,7 +14,6 @@ psf = ""
 wFrames = ""
 numFrames = ""
 catdcd_loc = ""
-gromacs = False
 
 parser = ArgumentParser(description=""" Using catdcd, cuts a .dcd trajectory into slices with the specified number of frames\n
 MDAnalysis is only used to get the number of frames if it is not specified.  """)
@@ -29,7 +28,6 @@ parser.add_argument("-o", "--output", help="The generic name of the output.")
 
 # Optional arguments
 parser.add_argument("-d", "--directory", help="Output directory ? Default is the current directory.")
-parser.add_argument("-trr", "--gromacs", help="Is it a gromacs trr trajectory ? Uses trjconv to split everything !")
 
 args = parser.parse_args()
 
@@ -86,29 +84,26 @@ except ValueError:
 # Checks if the file is indeed there - and if it isn't, browse your directories
 if args.file:
     trajectory = args.file
-#~ if os.path.isfile(trajectory):
-    #~ if len(trajectory) < 4 or (len(trajectory)) >= 4 and trajectory[-4:] != ".dcd":
-        #~ print "Wrong trajectory name ! Your trajectory must be a .dcd file. Which file do you want ?"
-        #~ from Tkinter import Tk
-        #~ from tkFileDialog import askopenfilename
-        #~ trajectory = askopenfilename()
-        #~ while len(trajectory) < 4 or (len(trajectory)) >= 4 and trajectory[-4:] != ".dcd":
-            #~ trajectory = askopenfilename()
+if os.path.isfile(trajectory):
+    if len(trajectory) < 4 or (len(trajectory)) >= 4 and trajectory[-4:] != ".dcd":
+        print "Wrong trajectory name ! Your trajectory must be a .dcd file. Which file do you want ?"
+        from Tkinter import Tk
+        from tkFileDialog import askopenfilename
+        trajectory = askopenfilename()
+        while len(trajectory) < 4 or (len(trajectory)) >= 4 and trajectory[-4:] != ".dcd":
+            trajectory = askopenfilename()
 
 # Checks if the topology file is there
 if args.psf:
     trajectory = args.psf
-#~ if os.path.isfile(psf):
-    #~ if len(psf) < 4 or (len(psf) >= 4 and psf[-4:] != ".psf"):
-        #~ print "Wrong topology name ! Your topology must be a .psf file. Which file do you want ?"
-        #~ from Tkinter import Tk
-        #~ from tkFileDialog import askopenfilename
-        #~ psf = askopenfilename()
-        #~ while len(psf) < 4 or (len(psf) >= 4 and psf[-4:] != ".psf"):
-            #~ psf = askopenfilename()
-
-if args.gromacs:
-    gromacs = True
+if os.path.isfile(psf):
+    if len(psf) < 4 or (len(psf) >= 4 and psf[-4:] != ".psf"):
+        print "Wrong topology name ! Your topology must be a .psf file. Which file do you want ?"
+        from Tkinter import Tk
+        from tkFileDialog import askopenfilename
+        psf = askopenfilename()
+        while len(psf) < 4 or (len(psf) >= 4 and psf[-4:] != ".psf"):
+            psf = askopenfilename()
 
 ######################## Functions ########################
 
@@ -118,8 +113,7 @@ def getNumframes(trajectory):
     import MDAnalysis
     mobile = MDAnalysis.Universe(psf, trajectory)
 
-    # The time is weird. My timestep in gromacs is 20fs, I have here to multiply by 20*10 to get the right time
-    return mobile.trajectory.numframes, int(mobile.trajectory.time)*200
+    return mobile.trajectory.numframes
 
 def makeSlice(trajectory, outName, directory, numFrames, wFrames, position):
     """Recursion to slice the trajectory into bits"""
@@ -138,23 +132,6 @@ def makeSlice(trajectory, outName, directory, numFrames, wFrames, position):
 
     return makeSlice(trajectory, outName, directory, numFrames, wFrames, position + wFrames)
 
-def makeTrrSlice(trajectory, outName, directory, numFrames, wFrames, position):
-    """Recursion to slice the trr"""
-
-    if numFrames-position>wFrames:
-        output = directory + outName + "_" + str(position - firstPos) + "-" + str(position - firstPos + wFrames -1) + ".trr"
-    else:
-        output = directory + outName + "_" + str(position - firstPos) + "-" + str(numFrames - firstPos) + ".trr"
-
-    bashCommand = "gmx trjconv -o " + output + " -f " + trajectory + " -b " + str(position) + " -e " + str(position + wFrames -1)
-    subprocess.Popen(bashCommand, shell=True).wait()
-    print bashCommand
-
-    if wFrames+position>numFrames:
-        sys.exit()
-
-    return makeTrrSlice(trajectory, outName, directory, numFrames, wFrames, position + wFrames)
-
 ######################## Main ########################
 
 if __name__ == '__main__':
@@ -163,12 +140,9 @@ if __name__ == '__main__':
     if args.numframes:
         numFrames = args.numframes
     else:
-        numFrames, firstPos = getNumframes(trajectory)
+        numFrames = getNumframes(trajectory)
 
-    if gromacs == False:
-        makeSlice(trajectory, outName, directory, numFrames, wFrames, 0)
-    else:
-        makeTrrSlice(trajectory, outName, directory, numFrames + firstPos, wFrames, firstPos)
+    makeSlice(trajectory, outName, directory, numFrames, wFrames, 0)
 
 
 
